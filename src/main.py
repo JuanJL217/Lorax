@@ -15,11 +15,12 @@ class Plox():
     def process(self:Plox, line:str) -> None:
 
         scanner:Scanner = Scanner(line)
-        tokens:list[Token] = scanner.scan_tokens()
+        try:
+            tokens:list[Token] = scanner.scan()
+            print(tokens)
 
-
-
-
+        except Exception as e:
+            print(e)
     def main(self : Plox) -> None:
         while True:
             try:
