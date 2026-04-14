@@ -17,7 +17,8 @@ class Plox():
         scanner:Scanner = Scanner(line)
         try:
             tokens:list[Token] = scanner.scan()
-            print(tokens)
+            for token in tokens:
+                print(token)
 
         except Exception as e:
             print(e)

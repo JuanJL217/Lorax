@@ -1,6 +1,5 @@
 from Token import Token, TokenType, KeyWords
 
-
 class Scanner:
     def __init__(self, line: str):
         self.line = line
@@ -20,6 +19,13 @@ class Scanner:
             "+": TokenType.PLUS,
             ";": TokenType.SEMICOLON,
             "*": TokenType.STAR,
+        }
+
+        self.double_tokens = {
+            "=": (TokenType.EQUAL, TokenType.EQUAL_EQUAL),
+            "!": (TokenType.BANG, TokenType.BANG_EQUAL),
+            "<": (TokenType.LESS, TokenType.LESS_EQUAL),
+            ">": (TokenType.GREATER, TokenType.GREATER_EQUAL),
         }
 
     def scan(self) -> list[Token]:
@@ -52,23 +58,9 @@ class Scanner:
             self._identifier()
             return
 
-        if c == "=":
-            token = TokenType.EQUAL_EQUAL if self._match("=") else TokenType.EQUAL
-            self._add_token(token)
-            return
-
-        if c == "!":
-            token = TokenType.BANG_EQUAL if self._match("=") else TokenType.BANG
-            self._add_token(token)
-            return
-
-        if c == "<":
-            token = TokenType.LESS_EQUAL if self._match("=") else TokenType.LESS
-            self._add_token(token)
-            return
-
-        if c == ">":
-            token = TokenType.GREATER_EQUAL if self._match("=") else TokenType.GREATER
+        if c in self.double_tokens:
+            simple, doble = self.double_tokens[c]
+            token = doble if self._match("=") else simple
             self._add_token(token)
             return
 

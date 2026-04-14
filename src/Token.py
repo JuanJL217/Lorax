@@ -24,7 +24,7 @@ class TokenType(Enum):
 
     # One or two character tokens
     PLUS = auto()
-    PLUS_PLUS = auto()
+    # PLUS_PLUS = auto()
     BANG = auto()
     BANG_EQUAL = auto()
     EQUAL = auto()
@@ -34,8 +34,8 @@ class TokenType(Enum):
     LESS = auto()
     LESS_EQUAL = auto()
     QUESTION = auto()
-    COLON = auto()
-    STAR_STAR = auto()
+    # COLON = auto()
+    # STAR_STAR = auto()
 
     # reserved words
     AND = auto()
@@ -67,8 +67,11 @@ class Token():
         self.literal = literal # this is the real value. That could be float, str, bool or None
 
     def __repr__(self) -> str:
-        f"{self.token_type.name} asdasd"
-        return f"{self.token_type.name}"
+        if self.token_type == TokenType.IDENTIFIER:
+            return f"{self.token_type.name}<{self.lexeme}>"
+
+        return ( f"{self.token_type.name}" if self.literal is None 
+                else f"{self.token_type.name}<{self.literal}>" )
     
 KeyWords = {
     "and": TokenType.AND,
