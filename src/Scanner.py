@@ -1,4 +1,4 @@
-from Token import Token, TokenType, KeyWords
+from .Token import Token, TokenType, TokenKeywords
 
 class Scanner:
     def __init__(self, line: str):
@@ -13,12 +13,13 @@ class Scanner:
             ")": TokenType.RIGHT_PAREN,
             "{": TokenType.LEFT_BRACE,
             "}": TokenType.RIGHT_BRACE,
+            "[": TokenType.LEFT_BRACKET,
+            "]": TokenType.RIGHT_BRACKET,
             ",": TokenType.COMMA,
-            ".": TokenType.DOT,
-            "-": TokenType.MINUS,
-            "+": TokenType.PLUS,
             ";": TokenType.SEMICOLON,
-            "*": TokenType.STAR,
+            "%": TokenType.PERCENT,
+            "?": TokenType.QUESTION,
+            ":": TokenType.COLON,
         }
 
         self.double_tokens = {
@@ -46,6 +47,23 @@ class Scanner:
             self.line_number += 1
             return
 
+        if c == ".":
+            if self._lookahead().isdigit():
+                raise Exception(f"Unexpected character: {c}")
+            self._add_token(TokenType.DOT)
+            return
+
+        # Operadores dobles matemáticos
+        if c == "+":
+            self._add_token(TokenType.PLUS_PLUS if self._match("+") else TokenType.PLUS)
+            return
+        if c == "-":
+            self._add_token(TokenType.MINUS_MINUS if self._match("-") else TokenType.MINUS)
+            return
+        if c == "*":
+            self._add_token(TokenType.STAR_STAR if self._match("*") else TokenType.STAR)
+            return
+
         if c in self.single_tokens:
             self._add_token(self.single_tokens[c])
             return
@@ -68,15 +86,36 @@ class Scanner:
             if self._match("/"):
                 while self._lookahead() != "\n" and not self._end_of_line():
                     self._advance()
+
+            elif self._match("*"):
+                nesting = 1
+                while nesting > 0 and not self._end_of_line():
+                    if self._lookahead() == "/" and self._peek_next() == "*":
+                        self._advance()
+                        self._advance()
+                        nesting += 1
+                    elif self._lookahead() == "*" and self._peek_next() == "/":
+                        self._advance()
+                        self._advance()
+                        nesting -= 1
+                    else:
+                        if self._lookahead() == "\n":
+                            self.line_number += 1
+                        self._advance()
+                
+                # Se atrapa los comentarios que nunca se cerraron
+                if nesting > 0:
+                    raise Exception("Unterminated comment")
             else:
                 self._add_token(TokenType.SLASH)
             return
 
-        if c == '"':
-            self._string()
+        # Soporte para strings con comillas dobles o simples
+        if c in ('"', "'"):
+            self._string(c)
             return
 
-        raise Exception(f"Caracter inesperado: {c}")
+        raise Exception(f"Unexpected character: {c}")
 
     def _advance(self) -> str:
         c = self.line[self.index]
@@ -100,17 +139,24 @@ class Scanner:
     def _add_token(self, token_type, literal=None):
         text = self.line[self.start:self.index]
         self.tokens.append(
-            Token(token_type, lexeme=text, literal=literal)
+            Token(token_type, lexeme=text, literal=literal, line=self.line_number)
         )
 
     def _number(self):
         while self._lookahead().isdigit():
             self._advance()
 
-        if self._lookahead() == "." and self._peek_next().isdigit():
-            self._advance()
-            while self._lookahead().isdigit():
+        # Si encontramos un punto, el siguiente caracter DEBE ser un dígito
+        if self._lookahead() == ".":
+            if self._peek_next().isdigit():
                 self._advance()
+                while self._lookahead().isdigit():
+                    self._advance()
+            else:
+                raise Exception("Invalid number format")
+
+        if self._is_alpha(self._lookahead()) or self._lookahead() == ".":
+            raise Exception("Invalid number format")
 
         value = float(self.line[self.start:self.index])
         self._add_token(TokenType.NUMBER, value)
@@ -121,21 +167,21 @@ class Scanner:
 
         text = self.line[self.start:self.index]
 
-        if text in KeyWords:
-            self._add_token(KeyWords[text])
+        if text in TokenKeywords:
+            self._add_token(TokenKeywords[text])
         else:
             self._add_token(TokenType.IDENTIFIER)
 
-    def _string(self):
-        while self._lookahead() != '"' and not self._end_of_line():
+    def _string(self, quote_char: str):
+        while self._lookahead() != quote_char and not self._end_of_line():
             if self._lookahead() == "\n":
                 self.line_number += 1
             self._advance()
 
         if self._end_of_line():
-            raise Exception("String sin cerrar")
+            raise Exception("Unterminated string")
 
-        self._advance()
+        self._advance() # Cerramos la comilla
 
         value = self.line[self.start + 1 : self.index - 1]
         self._add_token(TokenType.STRING, value)
