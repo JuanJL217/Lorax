@@ -1,0 +1,35 @@
+
+print "--- PRUEBA DE CLASES Y POLIMORFISMO ---";
+
+class Vehiculo {
+    init(nombre) {
+        this.nombre = nombre;
+    }
+    
+    arrancar() {
+        print this.nombre + " hace un ruido genérico: Vroom!";
+    }
+}
+
+class Coche < Vehiculo {
+    init(nombre) { super.init(nombre); }
+    
+    arrancar() {
+        print this.nombre + " enciende el motor: Sonido de motor*";
+    }
+}
+
+class Bicicleta < Vehiculo {
+    init(nombre) { super.init(nombre); }
+    
+    arrancar() {
+        print this.nombre + " avanza en silencio: Sonido de bicileta*";
+    }
+}
+
+fun probarVehiculo(v) {
+    v.arrancar(); 
+}
+
+probarVehiculo(Coche("Ferrari"));
+probarVehiculo(Bicicleta("BMX"));

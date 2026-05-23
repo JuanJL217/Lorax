@@ -1,0 +1,80 @@
+
+class Aventurero {
+    init(datos) {
+        this.datos = datos;
+    }
+    
+    actuar() {
+        print this.datos["nombre"] + " está bebiendo cerveza en la esquina.";
+    }
+    
+    mostrarEstado() {
+        var clase_personaje = type(this);
+        print "[" + clase_personaje + "] " + this.datos["nombre"] + " | Oro: " + string(this.datos["oro"]) + " monedas";
+    }
+}
+
+class Hechicero < Aventurero {
+    init(datos) { super.init(datos); }
+    
+    actuar() {
+        var hechizos = this.datos["hechizos"];
+        print this.datos["nombre"] + " repasa su grimorio: " + string(hechizos);
+        
+        if (this.datos.has("mana")) {
+            this.datos["mana"]++;
+            print "  -> Meditando... Maná regenerado a " + string(this.datos["mana"]);
+        }
+
+        var estado_magico = (this.datos["mana"] > 10) ? "¡Listo para lanzar destrucción!" : "Demasiado débil para pelear.";
+        print "  -> Estado: " + estado_magico;
+    }
+
+    aprender(hechizo) {
+        this.datos["hechizos"].append(hechizo);
+        print ">>> ¡" + this.datos["nombre"] + " aprendió el hechizo '" + hechizo + "'! <<<";
+    }
+}
+
+class Ladron < Aventurero {
+    init(datos) { super.init(datos); }
+    
+    actuar() {
+        var mochila = this.datos["mochila"];
+        
+        print this.datos["nombre"] + " revisa su botín de " + string(mochila.len()) + " objetos robados.";
+        
+        if (mochila.len() > 0) {
+            var vendido = mochila.pop(0);
+            this.datos["oro"] = this.datos["oro"] + 50;
+            print "  -> ¡Vendió '" + vendido + "' en el mercado negro por 50 monedas!";
+        }
+    }
+}
+
+var merlin = Hechicero({ "nombre": "Merlín", "oro": 15, "hechizos": ["Chispa"], "mana": 9 });
+var garrett = Ladron({ "nombre": "Garrett", "oro": 200, "mochila": ["Cáliz de plata", "Anillo de rubí", "Daga vieja"] });
+
+var party = [merlin, garrett];
+
+print "=== BIENVENIDOS A LA TABERNA DEL PONEY PISADOR ===";
+var ronda = 1;
+while (ronda <= 2) {
+    print "--- RONDA " + string(ronda) + " ---";
+    
+    var i = 0;
+    while (i < party.len()) {
+        var aventurero = party[i];
+        aventurero.mostrarEstado();
+        aventurero.actuar();
+        print "";
+        i++;
+    }
+    
+    if (ronda == 1) {
+        merlin.aprender("Rayo Relámpago");
+    }
+    
+    print "==========================================";
+    ronda++;
+}

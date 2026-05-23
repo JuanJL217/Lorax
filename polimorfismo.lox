@@ -1,0 +1,65 @@
+// DEMOSTRACIÓN DE POLIMORFISMO Y LISTAS
+
+class Heroe {
+    init(nombre) {
+        this.nombre = nombre;
+    }
+
+    atacar() {
+        print this.nombre + " lanza un ataque básico sin mucha gracia.";
+    }
+}
+
+class Mago < Heroe {
+    init(nombre) {
+        super.init(nombre);
+        this.mana = 100;
+    }
+
+    atacar() {
+        this.mana = this.mana - 30;
+        print this.nombre + " conjura una BOLA DE FUEGO! (Mana restante: " + string(this.mana) + ")";
+    }
+}
+
+class Guerrero < Heroe {
+    init(nombre) {
+        super.init(nombre);
+        this.furia = 0;
+    }
+
+    atacar() {
+        this.furia = this.furia + 50;
+        print this.nombre + " da un GOLPE DE HACHA BRUTAL! (Furia al " + string(this.furia) + "%)";
+    }
+}
+
+class Bardo < Heroe {
+    init(nombre) {
+        super.init(nombre);
+    }
+
+    atacar() {
+        print this.nombre + " toca un SOLO DE GUITARRA! El enemigo se confunde y se pone a bailar.";
+    }
+}
+
+fun turnoDeBatalla(personaje) {
+    print ">>> Es el turno de " + personaje.nombre + " <<<";
+    personaje.atacar();
+    
+    print "---------------------------------------------";
+}
+
+var gandalf = Mago("Gandalf");
+var conan = Guerrero("Conan el Bárbaro");
+var jaskier = Bardo("Jaskier");
+
+print "¡UN GOBLIN SALVAJE APARECE EN EL CALABOZO!";
+print "";
+
+var grupo = [gandalf, conan, jaskier];
+
+for (var i = 0; i < grupo.len(); i++) {
+    turnoDeBatalla(grupo[i]);
+}

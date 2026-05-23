@@ -53,7 +53,6 @@ class Scanner:
             self._add_token(TokenType.DOT)
             return
 
-        # Operadores dobles matemáticos
         if c == "+":
             self._add_token(TokenType.PLUS_PLUS if self._match("+") else TokenType.PLUS)
             return
@@ -103,14 +102,12 @@ class Scanner:
                             self.line_number += 1
                         self._advance()
                 
-                # Se atrapa los comentarios que nunca se cerraron
                 if nesting > 0:
                     raise Exception("Unterminated comment")
             else:
                 self._add_token(TokenType.SLASH)
             return
 
-        # Soporte para strings con comillas dobles o simples
         if c in ('"', "'"):
             self._string(c)
             return
@@ -146,7 +143,6 @@ class Scanner:
         while self._lookahead().isdigit():
             self._advance()
 
-        # Si encontramos un punto, el siguiente caracter DEBE ser un dígito
         if self._lookahead() == ".":
             if self._peek_next().isdigit():
                 self._advance()
@@ -181,7 +177,7 @@ class Scanner:
         if self._end_of_line():
             raise Exception("Unterminated string")
 
-        self._advance() # Cerramos la comilla
+        self._advance()
 
         value = self.line[self.start + 1 : self.index - 1]
         self._add_token(TokenType.STRING, value)

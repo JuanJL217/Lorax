@@ -2,11 +2,13 @@ from .Token import Token, TokenType
 from .Expr import (
     Expr, BinaryExpr, GroupingExpr, LiteralExpr, UnaryExpr,
     VariableExpr, AssignmentExpr, LogicExpr, CallExpr,
-    TernaryExpr, IndexExpr, PostfixExpr, PrefixExpr
+    TernaryExpr, IndexExpr, PostfixExpr, PrefixExpr,
+    GetExpr, SetExpr, ThisExpr, SuperExpr,
+    ListExpr, IndexSetExpr, DictExpr
 )
 from .Stmt import (
     Stmt, PrintStmt, ExpressionStmt, BlockStmt, VarDecl,
-    FunDecl, IfStmt, WhileStmt, ReturnStmt,
+    FunDecl, IfStmt, WhileStmt, ReturnStmt, ClassDecl
 )
 
 class Parser(object):
@@ -21,8 +23,9 @@ class Parser(object):
         return statements
 
     def statement(self) -> Stmt:
+        if self._match(TokenType.CLASS): return self.class_declaration()
         if self._match(TokenType.VAR): return self.variable_declaration()
-        if self._match(TokenType.FUN): return self.function_declaration()
+        if self._match(TokenType.FUN): return self.function_declaration("function")
         if self._match(TokenType.RETURN): return self.return_statement()
         if self._match(TokenType.IF): return self.if_statement()
         if self._match(TokenType.WHILE): return self.while_statement()
@@ -104,9 +107,26 @@ class Parser(object):
         self._consume(TokenType.SEMICOLON, "Expected ';' after return value")
         return ReturnStmt(value)
 
-    def function_declaration(self) -> FunDecl:
-        name = self._consume(TokenType.IDENTIFIER, "Expected function name")
-        self._consume(TokenType.LEFT_PAREN, "Expected '(' after function name")
+    def class_declaration(self) -> ClassDecl:
+        name = self._consume(TokenType.IDENTIFIER, "Expected class name")
+        
+        superclass = None
+        if self._match(TokenType.LESS):
+            self._consume(TokenType.IDENTIFIER, "Expected superclass name")
+            superclass = VariableExpr(self._previous())
+            
+        self._consume(TokenType.LEFT_BRACE, "Expected '{' before class body")
+        
+        methods = []
+        while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end():
+            methods.append(self.function_declaration("method"))
+            
+        self._consume(TokenType.RIGHT_BRACE, "Expected '}' after class body")
+        return ClassDecl(name, superclass, methods)
+
+    def function_declaration(self, kind: str = "function") -> FunDecl:
+        name = self._consume(TokenType.IDENTIFIER, f"Expected {kind} name")
+        self._consume(TokenType.LEFT_PAREN, f"Expected '(' after {kind} name")
         
         parameters = []
         if not self._check(TokenType.RIGHT_PAREN):
@@ -134,6 +154,10 @@ class Parser(object):
             value = self.assignment()
             if isinstance(expr, VariableExpr):
                 return AssignmentExpr(expr.name, value)
+            elif isinstance(expr, GetExpr):
+                return SetExpr(expr.object, expr.name, value)
+            elif isinstance(expr, IndexExpr):
+                return IndexSetExpr(expr.target, expr.index, value)
             raise SyntaxError("Invalid assignment target")
         return expr
 
@@ -198,6 +222,16 @@ class Parser(object):
                 op_token = Token(math_op, op.lexeme[0], None, op.line)
                 value = BinaryExpr(right, op_token, LiteralExpr(1.0))
                 return AssignmentExpr(right.name, value)
+            elif isinstance(right, GetExpr):
+                math_op = TokenType.PLUS if op.token_type == TokenType.PLUS_PLUS else TokenType.MINUS
+                op_token = Token(math_op, op.lexeme[0], None, op.line)
+                value = BinaryExpr(right, op_token, LiteralExpr(1.0))
+                return SetExpr(right.object, right.name, value)
+            elif isinstance(right, IndexExpr):
+                math_op = TokenType.PLUS if op.token_type == TokenType.PLUS_PLUS else TokenType.MINUS
+                op_token = Token(math_op, op.lexeme[0], None, op.line)
+                value = BinaryExpr(right, op_token, LiteralExpr(1.0))
+                return IndexSetExpr(right.target, right.index, value)
             
             if op.token_type == TokenType.MINUS_MINUS:
                 single_token = Token(TokenType.MINUS, "-", None, op.line)
@@ -215,12 +249,15 @@ class Parser(object):
         while True:
             if self._match(TokenType.LEFT_PAREN):
                 expr = self._finish_call(expr)
+            elif self._match(TokenType.DOT):
+                name = self._consume(TokenType.IDENTIFIER, "Expected property name after '.'.")
+                expr = GetExpr(expr, name)
             elif self._match(TokenType.LEFT_BRACKET):
                 index = self.expression()
                 self._consume(TokenType.RIGHT_BRACKET, "Expected ']' after index")
                 expr = IndexExpr(expr, index)
             elif self._match(TokenType.PLUS_PLUS, TokenType.MINUS_MINUS):
-                if not isinstance(expr, (VariableExpr, IndexExpr)):
+                if not isinstance(expr, (VariableExpr, IndexExpr, GetExpr)):
                     raise SyntaxError("Invalid postfix target")
                 expr = PostfixExpr(expr, self._previous())
             else:
@@ -241,8 +278,35 @@ class Parser(object):
         if self._match(TokenType.FALSE): return LiteralExpr(False)
         if self._match(TokenType.TRUE): return LiteralExpr(True)
         if self._match(TokenType.NIL): return LiteralExpr(None)
+        if self._match(TokenType.THIS): return ThisExpr(self._previous())
+        if self._match(TokenType.SUPER):
+            keyword = self._previous()
+            self._consume(TokenType.DOT, "Expected '.' after 'super'.")
+            method = self._consume(TokenType.IDENTIFIER, "Expected superclass method name.")
+            return SuperExpr(keyword, method)
         if self._match(TokenType.NUMBER, TokenType.STRING): return LiteralExpr(self._previous().literal)
         if self._match(TokenType.IDENTIFIER): return VariableExpr(self._previous())
+
+        if self._match(TokenType.LEFT_BRACKET):
+            elements = []
+            if not self._check(TokenType.RIGHT_BRACKET):
+                while True:
+                    elements.append(self.expression())
+                    if not self._match(TokenType.COMMA): break
+            self._consume(TokenType.RIGHT_BRACKET, "Expected ']' after list elements")
+            return ListExpr(elements)
+
+        if self._match(TokenType.LEFT_BRACE):
+            keys = []
+            values = []
+            if not self._check(TokenType.RIGHT_BRACE):
+                while True:
+                    keys.append(self.expression())
+                    self._consume(TokenType.COLON, "Expected ':' after dictionary key")
+                    values.append(self.expression())
+                    if not self._match(TokenType.COMMA): break
+            self._consume(TokenType.RIGHT_BRACE, "Expected '}' after dictionary elements")
+            return DictExpr(keys, values)
 
         if self._match(TokenType.LEFT_PAREN):
             expr = self.expression()

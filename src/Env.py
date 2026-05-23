@@ -28,24 +28,31 @@ class Env(object):
         self.values[name] = value
 
     def get(self, name: str, distance: int | None = None) -> object:
-        scope = self
-
         if distance is not None:
             scope = self.ancestor(distance)
-
-        if name in scope.values:
-            return scope.values[name]
+            if name in scope.values:
+                return scope.values[name]
+        else:
+            scope = self
+            while scope is not None:
+                if name in scope.values:
+                    return scope.values[name]
+                scope = scope.enclosing
 
         raise RuntimeError(f"Undefined variable '{name}'")
 
     def assign(self, name: str, value: object, distance: int | None = None) -> object:
-        scope = self
-
         if distance is not None:
             scope = self.ancestor(distance)
-
-        if name in scope.values:
-            scope.values[name] = value
-            return value
+            if name in scope.values:
+                scope.values[name] = value
+                return value
+        else:
+            scope = self
+            while scope is not None:
+                if name in scope.values:
+                    scope.values[name] = value
+                    return value
+                scope = scope.enclosing
 
         raise RuntimeError(f"Cannot assign to undefined variable '{name}'")

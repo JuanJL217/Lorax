@@ -1,0 +1,17 @@
+
+print "--- PRUEBA DE LISTAS EN LORAX ---";
+
+var tareas = ["Aprender Lorax", "Aprobar Compiladores"];
+print "Mis tareas originales: " + string(tareas);
+print "Cantidad de tareas: " + string(len(tareas));
+
+tareas.append("Descansar");
+print "Después de agregar: " + string(tareas);
+
+var completada = tareas.pop(0);
+print "Completé: " + completada;
+print "Tareas restantes: " + string(tareas);
+
+tareas[0] = "Aprobado con 10 (ojalá)";
+print "Actualización: " + string(tareas);
+print "Tipo de dato: " + type(tareas);

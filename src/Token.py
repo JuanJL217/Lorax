@@ -24,6 +24,7 @@ class TokenType(Enum):
     IDENTIFIER = auto(); STRING = auto(); NUMBER = auto()
 
     AND = auto(); ELSE = auto(); FALSE = auto()
+    CLASS = auto()
     FUN = auto(); FOR = auto(); IF = auto()
     NIL = auto(); OR = auto(); PRINT = auto()
     RETURN = auto(); SUPER = auto(); THIS = auto()
@@ -47,6 +48,7 @@ class Token:
 
 TokenKeywords = {
     "and": TokenType.AND, 
+    "class": TokenType.CLASS,
     "else": TokenType.ELSE, 
     "false": TokenType.FALSE,
     "fun": TokenType.FUN, 

@@ -100,3 +100,60 @@ class PrefixExpr(Expr):
 
     def __repr__(self) -> str:
         return f"({self.operator.lexeme}{self.right})"
+
+class GetExpr(Expr):
+    def __init__(self, object: Expr, name: Token):
+        self.object = object
+        self.name = name
+
+    def __repr__(self) -> str:
+        return f"{self.object}.{self.name.lexeme}"
+
+class SetExpr(Expr):
+    def __init__(self, object: Expr, name: Token, value: Expr):
+        self.object = object
+        self.name = name
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"{self.object}.{self.name.lexeme} = {self.value}"
+
+class ThisExpr(Expr):
+    def __init__(self, keyword: Token):
+        self.keyword = keyword
+
+    def __repr__(self) -> str:
+        return "this"
+
+class SuperExpr(Expr):
+    def __init__(self, keyword: Token, method: Token):
+        self.keyword = keyword
+        self.method = method
+
+    def __repr__(self) -> str:
+        return f"super.{self.method.lexeme}"
+
+class ListExpr(Expr):
+    def __init__(self, elements: list[Expr]):
+        self.elements = elements
+
+    def __repr__(self) -> str:
+        return f"[{', '.join(str(e) for e in self.elements)}]"
+
+class IndexSetExpr(Expr):
+    def __init__(self, target: Expr, index: Expr, value: Expr):
+        self.target = target
+        self.index = index
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"{self.target}[{self.index}] = {self.value}"
+
+class DictExpr(Expr):
+    def __init__(self, keys: list[Expr], values: list[Expr]):
+        self.keys = keys
+        self.values = values
+
+    def __repr__(self) -> str:
+        pairs = [f"{k}: {v}" for k, v in zip(self.keys, self.values)]
+        return f"{{{', '.join(pairs)}}}"

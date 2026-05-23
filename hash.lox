@@ -1,0 +1,18 @@
+
+print "--- PRUEBA DE HASHES EN LORAX ---";
+
+var estudiante = {
+    "nombre": "Juan",
+    "materia": "Compiladores",
+    "nota": 0
+};
+
+print "Estudiante actual: " + string(estudiante);
+
+estudiante["nota"] = 10;
+estudiante["aprobado"] = true;
+print "Después de calificar: " + string(estudiante);
+
+if (estudiante.has("aprobado")) {
+    print "Las llaves del hash son: " + string(estudiante.keys());
+}

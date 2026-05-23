@@ -1,0 +1,21 @@
+print "--- Iniciando ciclo while ---";
+
+var elemento = 0;
+while (elemento < 20) {
+    if (elemento % 2 == 0) {
+        print "Soy multiplo de 2";
+    } else {   
+        print elemento;
+    }
+    elemento = elemento + 1;
+}
+
+print "--- Iniciando ciclo for ---";
+
+for (; elemento <= 1000; elemento++) {
+    if (elemento % 2 == 0) {
+        print "Soy multiplo de 2";
+    } else {   
+        print elemento;
+    }
+}

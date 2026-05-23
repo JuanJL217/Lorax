@@ -35,6 +35,15 @@ class VarDecl(Stmt):
         init = f" = {self.initializer}" if self.initializer else ""
         return f"var {self.name.lexeme}{init};"
 
+class ClassDecl(Stmt):
+    def __init__(self, name: Token, superclass: 'Expr | None', methods: list['FunDecl']):
+        self.name = name
+        self.superclass = superclass
+        self.methods = methods
+
+    def __repr__(self) -> str:
+        return f"class {self.name.lexeme} {{ ... }}"
+
 class FunDecl(Stmt):
     def __init__(self, name: Token, parameters: list[Token], body: list[Stmt]):
         self.name = name
