@@ -1,11 +1,22 @@
 import argparse
 import traceback
 from dataclasses import dataclass
+import os
 
 from .Scanner import Scanner
 from .Parser import Parser
 from .Resolver import Resolver
 from .Interpreter import Interpreter
+from .Token import TokenType
+
+# Si no se descarga eso, no explota, solo usa el input común
+try:
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.history import FileHistory
+    from platformdirs import user_cache_dir
+    PROMPT_TOOLKIT_AVAILABLE = True
+except ImportError:
+    PROMPT_TOOLKIT_AVAILABLE = False
 
 @dataclass
 class Config:
@@ -19,16 +30,87 @@ class Plox:
         self.config = config
         self.interpreter = Interpreter()
 
-    def run_repl(self):
-        print("Lorax REPL - v1.0 (Basado en Lox)")
+    def _is_incomplete(self, source: str) -> bool:
+        try:
+            scanner = Scanner(source)
+            tokens = scanner.scan()
+            
+            open_pairs = 0
+            for t in tokens:
+                if t.token_type in (TokenType.LEFT_BRACE, TokenType.LEFT_PAREN, TokenType.LEFT_BRACKET):
+                    open_pairs += 1
+                elif t.token_type in (TokenType.RIGHT_BRACE, TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACKET):
+                    open_pairs -= 1
+            return open_pairs > 0
+        except Exception as e:
+            # Si el Scanner detecta un string o comentario sin cerrar, seguimos esperando
+            return "Unterminated" in str(e)
+
+    def _better_input(self):
+        cache_dir = user_cache_dir("lorax")
+        os.makedirs(cache_dir, exist_ok=True)
+        session = PromptSession(history=FileHistory(os.path.join(cache_dir, "history.txt")))
+
+        buffer = []
         while True:
             try:
-                line = input("> ")
-                if not line.strip(): continue
-                self.run(line)
+                prompt_char = "> " if not buffer else ". "
+                line = session.prompt(prompt_char)
+                
+                if not line.strip() and not buffer: 
+                    continue
+                
+                buffer.append(line)
+                source = "\n".join(buffer)
+                
+                if self._is_incomplete(source):
+                    continue
+                
+                self.run(source)
+                buffer = []
             except (EOFError, KeyboardInterrupt):
-                print("\nSaliendo...")
-                break
+                # Si estamos a mitad de un bloque, Ctrl+C lo cancela limpiando el buffer
+                if buffer:
+                    buffer = []
+                    print()
+                    continue
+                else:
+                    print("\nSaliendo...")
+                    break
+
+    def _simple_input(self):
+        buffer = []
+        while True:
+            try:
+                prompt_char = "> " if not buffer else ". "
+                line = input(prompt_char)
+                
+                if not line.strip() and not buffer: 
+                    continue
+                
+                buffer.append(line)
+                source = "\n".join(buffer)
+                
+                if self._is_incomplete(source):
+                    continue
+                
+                self.run(source)
+                buffer = []
+            except (EOFError, KeyboardInterrupt):
+                if buffer:
+                    buffer = []
+                    print()
+                    continue
+                else:
+                    print("\nSaliendo...")
+                    break
+
+    def run_repl(self):
+        print("Lorax REPL - v1.0 (Basado en Lox)")
+        if PROMPT_TOOLKIT_AVAILABLE:
+            self._better_input()
+        else:
+            self._simple_input()
 
     def run_file(self, path: str):
         try:

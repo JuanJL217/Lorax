@@ -6,27 +6,32 @@ from .Env import Env
 from .LoraxClass import LoraxClass
 from .LoraxInstance import LoraxInstance
 from .LoraxFunction import LoraxFunction, Return
+from .Constants import (
+    INIT_METHOD, THIS_BINDING, SUPER_BINDING,
+    METHOD_APPEND, METHOD_POP, METHOD_LEN, METHOD_HAS, METHOD_KEYS, FUNC_TYPE,
+    TYPE_NIL, TYPE_BOOL, TYPE_NUMBER, TYPE_STRING, TYPE_LIST, TYPE_HASH, TYPE_CLASS, TYPE_BUILTIN
+)
 
 class NativeType:
     def arity(self): return 1
-    def call(self, interpreter, args):
+    def call(self, _interpreter, args):
         val = args[0]
-        if val is None: return "nil"
-        if isinstance(val, bool): return "bool"
-        if isinstance(val, (int, float)): return "number"
-        if isinstance(val, str): return "string"
-        if isinstance(val, list): return "list"
-        if isinstance(val, dict): return "hash"
+        if val is None: return TYPE_NIL
+        if isinstance(val, bool): return TYPE_BOOL
+        if isinstance(val, (int, float)): return TYPE_NUMBER
+        if isinstance(val, str): return TYPE_STRING
+        if isinstance(val, list): return TYPE_LIST
+        if isinstance(val, dict): return TYPE_HASH
         if isinstance(val, LoraxInstance):
             return val.klass.name
         if isinstance(val, LoraxClass):
-            return "class"
-        return "builtin function"
-    def __str__(self): return "builtin function"
+            return TYPE_CLASS
+        return TYPE_BUILTIN
+    def __str__(self): return TYPE_BUILTIN
 
 class NativeLen:
     def arity(self): return 1
-    def call(self, interpreter, args):
+    def call(self, _interpreter, args):
         val = args[0]
         if not isinstance(val, (str, list, dict)):
             raise RuntimeError("Argument of `len` must be a string, list or hash")
@@ -34,7 +39,7 @@ class NativeLen:
 
 class NativeAppend:
     def arity(self): return 2
-    def call(self, interpreter, args):
+    def call(self, _interpreter, args):
         if not isinstance(args[0], list):
             raise RuntimeError("First argument of `append` must be a list")
         args[0].append(args[1])
@@ -42,21 +47,21 @@ class NativeAppend:
 
 class NativeHas:
     def arity(self): return 2
-    def call(self, interpreter, args):
+    def call(self, _interpreter, args):
         if not isinstance(args[0], dict):
             raise RuntimeError("First argument of `has` must be a hash")
         return args[1] in args[0]
 
 class NativeKeys:
     def arity(self): return 1
-    def call(self, interpreter, args):
+    def call(self, _interpreter, args):
         if not isinstance(args[0], dict):
             raise RuntimeError("Argument of `keys` must be a hash")
         return list(args[0].keys())
 
 class NativePop:
     def arity(self): return 2
-    def call(self, interpreter, args):
+    def call(self, _interpreter, args):
         if not isinstance(args[0], list):
             raise RuntimeError("First argument of `pop` must be a list")
         index = args[1]
@@ -66,50 +71,46 @@ class NativePop:
             raise RuntimeError("Index out of range")
         return args[0].pop(int(index))
 
-class BoundNativeMethod:
-    def __init__(self, obj, method_name):
-        self.obj = obj
-        self.method_name = method_name
-        self._arity = 0
-        
-        if isinstance(obj, list):
-            if method_name in ("append", "pop"): self._arity = 1
-            elif method_name == "len": self._arity = 0
-            else: raise RuntimeError(f"Undefined property '{method_name}' on list.")
-        elif isinstance(obj, dict):
-            if method_name == "has": self._arity = 1
-            elif method_name in ("keys", "len"): self._arity = 0
-            else: raise RuntimeError(f"Undefined property '{method_name}' on hash.")
-        elif isinstance(obj, str):
-            if method_name == "len": self._arity = 0
-            else: raise RuntimeError(f"Undefined property '{method_name}' on string.")
-        else:
-            raise RuntimeError("Invalid object for native methods.")
+class BoundAppend:
+    def __init__(self, obj): self.obj = obj
+    def arity(self): return 1
+    def call(self, _interpreter, args):
+        self.obj.append(args[0])
+        return self.obj
+    def __str__(self): return f"<native method {METHOD_APPEND}>"
 
-    def arity(self):
-        return self._arity
-        
-    def call(self, interpreter, args):
-        if isinstance(self.obj, list):
-            if self.method_name == "append":
-                self.obj.append(args[0])
-                return self.obj
-            if self.method_name == "pop":
-                index = args[0]
-                if not isinstance(index, (int, float)) or index < 0 or index % 1 != 0:
-                    raise RuntimeError("Index must be a positive whole number")
-                if int(index) >= len(self.obj):
-                    raise RuntimeError("Index out of range")
-                return self.obj.pop(int(index))
-            if self.method_name == "len": return float(len(self.obj))
-        elif isinstance(self.obj, dict):
-            if self.method_name == "has": return args[0] in self.obj
-            if self.method_name == "keys": return list(self.obj.keys())
-            if self.method_name == "len": return float(len(self.obj))
-        elif isinstance(self.obj, str):
-            if self.method_name == "len": return float(len(self.obj))
+class BoundPop:
+    def __init__(self, obj): self.obj = obj
+    def arity(self): return 1
+    def call(self, _interpreter, args):
+        index = args[0]
+        if not isinstance(index, (int, float)) or index < 0 or index % 1 != 0:
+            raise RuntimeError("Index must be a positive whole number")
+        if int(index) >= len(self.obj):
+            raise RuntimeError("Index out of range")
+        return self.obj.pop(int(index))
+    def __str__(self): return f"<native method {METHOD_POP}>"
 
-    def __str__(self): return f"<native method {self.method_name}>"
+class BoundLen:
+    def __init__(self, obj): self.obj = obj
+    def arity(self): return 0
+    def call(self, _interpreter, args):
+        return float(len(self.obj))
+    def __str__(self): return f"<native method {METHOD_LEN}>"
+
+class BoundHas:
+    def __init__(self, obj): self.obj = obj
+    def arity(self): return 1
+    def call(self, _interpreter, args):
+        return args[0] in self.obj
+    def __str__(self): return f"<native method {METHOD_HAS}>"
+
+class BoundKeys:
+    def __init__(self, obj): self.obj = obj
+    def arity(self): return 0
+    def call(self, _interpreter, args):
+        return list(self.obj.keys())
+    def __str__(self): return f"<native method {METHOD_KEYS}>"
 
 class Interpreter:
     def __init__(self):
@@ -117,12 +118,12 @@ class Interpreter:
         self.env = self.globals
         self.local_scope_depths = {}
         
-        self.globals.define("type", NativeType())
-        self.globals.define("len", NativeLen())
-        self.globals.define("append", NativeAppend())
-        self.globals.define("has", NativeHas())
-        self.globals.define("keys", NativeKeys())
-        self.globals.define("pop", NativePop())
+        self.globals.define(FUNC_TYPE, NativeType())
+        self.globals.define(METHOD_LEN, NativeLen())
+        self.globals.define(METHOD_APPEND, NativeAppend())
+        self.globals.define(METHOD_HAS, NativeHas())
+        self.globals.define(METHOD_KEYS, NativeKeys())
+        self.globals.define(METHOD_POP, NativePop())
 
     def interpret(self, statements):
         for stmt in statements:
@@ -199,7 +200,7 @@ class Interpreter:
             except ValueError: 
                 raise RuntimeError("Cannot cast string")
         if op == TokenType.STRING_CAST:
-            if right is None: return "nil"
+            if right is None: return TYPE_NIL
             if isinstance(right, bool): return "true" if right else "false"
             return str(right)
         if op == TokenType.BOOL_CAST:
@@ -356,8 +357,8 @@ class Interpreter:
         if distance is None:
             raise RuntimeError("Cannot use 'super' outside of a method.")
         
-        superclass = self.env.get("super", distance)
-        obj = self.env.get("this", distance - 1)
+        superclass = self.env.get(SUPER_BINDING, distance)
+        obj = self.env.get(THIS_BINDING, distance - 1)
         method = superclass.find_method(expr.method.lexeme)
         if not method:
             raise RuntimeError(f"Undefined property '{expr.method.lexeme}'.")
@@ -368,8 +369,22 @@ class Interpreter:
         obj = self.evaluate(expr.object)
         if isinstance(obj, LoraxInstance):
             return obj.get(expr.name)
-        if isinstance(obj, (list, dict, str)):
-            return BoundNativeMethod(obj, expr.name.lexeme)
+            
+        method_name = expr.name.lexeme
+        if isinstance(obj, list):
+            if method_name == METHOD_APPEND: return BoundAppend(obj)
+            if method_name == METHOD_POP: return BoundPop(obj)
+            if method_name == METHOD_LEN: return BoundLen(obj)
+            raise RuntimeError(f"Undefined property '{method_name}' on list.")
+        elif isinstance(obj, dict):
+            if method_name == METHOD_HAS: return BoundHas(obj)
+            if method_name == METHOD_KEYS: return BoundKeys(obj)
+            if method_name == METHOD_LEN: return BoundLen(obj)
+            raise RuntimeError(f"Undefined property '{method_name}' on hash.")
+        elif isinstance(obj, str):
+            if method_name == METHOD_LEN: return BoundLen(obj)
+            raise RuntimeError(f"Undefined property '{method_name}' on string.")
+            
         raise RuntimeError("Only instances have properties.")
 
     @evaluate.register(SetExpr)
@@ -401,11 +416,11 @@ class Interpreter:
         environment = self.env
         if stmt.superclass is not None:
             environment = Env(enclosing=environment)
-            environment.define("super", superclass)
+            environment.define(SUPER_BINDING, superclass)
 
         methods = {}
         for method in stmt.methods:
-            is_initializer = method.name.lexeme == "init"
+            is_initializer = method.name.lexeme == INIT_METHOD
             function = LoraxFunction(method, environment, is_initializer)
             methods[method.name.lexeme] = function
         klass = LoraxClass(stmt.name.lexeme, superclass, methods)

@@ -14,7 +14,7 @@ Para ejecutar Lorax, necesitas tener instalado **Python 3.14.3** (o una versión
 
 ## 1. Instalar dependencias
 
-Instala las dependencias necesarias (`prompt_toolkit` y `platformdirs`):
+Instala las dependencias necesarias (`prompt_toolkit` y `platformdirs`). Se no instalarla solo sera un input clásico de la librería estandar de Python:
 
 ```bash
 pip install prompt_toolkit platformdirs
@@ -45,6 +45,10 @@ Lorax soporta programación orientada a objetos de primer nivel. Se implementó 
 
 El intérprete implementa tipado dinámico real, permitiendo aprovechar polimorfismo puro entre jerarquías de clases.
 
+**Decisiones de Diseño Interno:**
+Siguiendo la filosofía del autor original de Lox (Robert Nystrom en *Crafting Interpreters*), decidimos separar por completo la representación estática (AST) de la representación en tiempo de ejecución. 
+Por este motivo se crearon archivos independientes como `LoraxClass.py` y `LoraxInstance.py`. Mientras que `Parser.py` solo se encarga de crear el nodo estático `ClassDecl`, `Interpreter.py` es el que instancia la clase viva (`LoraxClass`) en memoria, creando su closure y tabla de métodos. Cuando la clase es "llamada" o instanciada como una función (`MiClase()`), el intérprete crea un objeto `LoraxInstance`. Esta separación permite manejar el estado (los "fields" o propiedades) exclusivamente en la instancia, mientras que los comportamientos (métodos) se comparten en la clase delegando limpiamente el acceso mediante descriptores dinámicos y ligando `this` de manera oculta en el *environment*.
+
 ### Prueba de Clases
 
 ```bash
@@ -63,13 +67,18 @@ python3.14 -m src.main polimorfismo.lox
 
 Lorax soporta colecciones ordenadas, indexables y mutables mediante sintaxis con corchetes `[ ]`.
 
-Internamente, las listas se representan mediante nodos específicos del AST (`ListExpr` e `IndexSetExpr`) y delegan el almacenamiento a las estructuras `list` nativas de Python.
+**Decisiones de Diseño Interno:**
+El lenguaje Lox original delineado en el libro no posee ningún soporte nativo para arreglos dinámicos o listas, priorizando un núcleo de lenguaje mínimo. En Lorax decidimos que era una característica indispensable.
 
-También poseen soporte orientado a objetos mediante métodos integrados (`BoundNativeMethod`), permitiendo operaciones como:
+A nivel gramatical, se extendió `Parser.py` para reconocer la sintaxis de listas literales `[a, b, c]` generando el nodo `ListExpr`, y los accesos mediante corchetes `lista[i]` (nodos `IndexExpr` e `IndexSetExpr`). En `Interpreter.py`, en lugar de implementar una estructura de memoria manual para las listas desde cero, delegamos el almacenamiento al `list` nativo subyacente de Python para aprovechar sus optimizaciones en C.
 
-- `.append()`
-- `.pop()`
-- `.len()`
+También poseen soporte orientado a objetos mediante métodos integrados delegados a clases polimórficas (como `BoundAppend`, `BoundLen`), permitiendo operaciones como:
+
+- `.append(elemento)`: Agrega un nuevo elemento al final de la lista.
+- `.pop(indice)`: Elimina y devuelve el elemento en la posición especificada.
+- `.len()`: Devuelve la cantidad total de elementos en la lista.
+
+Para lograr esto sin necesidad de crear clases Lox globales en el código fuente, el intérprete intercepta la evaluación de propiedades (`GetExpr`) de estos objetos e inyecta dinámicamente la clase auxiliar correspondiente según el método llamado, lo que permite encadenar funciones escritas en Python como si fueran métodos puros del usuario (polimorfismo simulado).
 
 ### Prueba de Listas
 
@@ -83,14 +92,17 @@ python3.14 -m src.main list.lox
 
 Lorax incorpora estructuras llave-valor con sintaxis estilo JSON utilizando `{}`.
 
-Los hashes se abstraen mediante nodos específicos del AST y utilizan internamente los `dict` nativos de Python para garantizar acceso eficiente en tiempo constante promedio.
+**Decisiones de Diseño Interno:**
+De forma idéntica a las listas, los diccionarios o estructuras hash fueron excluidos deliberadamente del diseño base de Lox. Implementarlos en Lorax requirió extender profundamente el lenguaje.
+
+En la etapa de parseo, `Parser.py` fue modificado para permitir literales `{clave: valor}` que se convierten en un nodo `DictExpr`. Durante la evaluación (`Interpreter.py`), las expresiones indexadas que antes solo servían para listas fueron adaptadas polimórficamente para servir también como operaciones `get` y `set` de claves del diccionario. Internamente, son respaldados por el veloz motor de `dict` de Python, garantizando un acceso eficiente.
 
 Soportan:
 
 - asignación dinámica de claves
-- `.has()`
-- `.keys()`
-- `.len()`
+- `.has(clave)`: Devuelve `true` si la clave existe en el diccionario, o `false` en caso contrario.
+- `.keys()`: Devuelve una lista con todas las claves presentes en el diccionario.
+- `.len()`: Devuelve la cantidad de pares clave-valor almacenados.
 
 ### Prueba de Hashes
 
@@ -153,7 +165,7 @@ El objetivo del proyecto es servir como implementación educativa y extensible d
 
 # Benchmark de Performance
 
-Se realizó un benchmark simple comparando el tiempo de ejecución entre Python y Lorax al ejecutar un bucle `while` desde `0` hasta `1_000_000`.
+Se realizó un benchmark simple comparando el tiempo de ejecución entre Python y Lorax al ejecutar un bucle `while` desde `0` hasta `1.000.000`.
 
 ## Resultados
 

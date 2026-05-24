@@ -1,4 +1,5 @@
 from .Env import Env
+from .Constants import THIS_BINDING
 
 class Return(Exception):
     def __init__(self, value):
@@ -15,7 +16,7 @@ class LoraxFunction:
 
     def bind(self, instance):
         environment = Env(enclosing=self.closure)
-        environment.define("this", instance)
+        environment.define(THIS_BINDING, instance)
         return LoraxFunction(self.declaration, environment, self.is_initializer)
 
     def call(self, interpreter, arguments):
@@ -27,11 +28,11 @@ class LoraxFunction:
             interpreter.execute_block(self.declaration.body, environment)
         except Return as return_value:
             if self.is_initializer:
-                return self.closure.get("this")
+                return self.closure.get(THIS_BINDING)
             return return_value.value
             
         if self.is_initializer:
-            return self.closure.get("this")
+            return self.closure.get(THIS_BINDING)
         return None
 
     def __str__(self):

@@ -11,6 +11,7 @@ from .Expr import (
     TernaryExpr, IndexExpr, PrefixExpr,
     ListExpr, IndexSetExpr, DictExpr
 )
+from .Constants import THIS_BINDING, SUPER_BINDING
 
 class Resolver:
     def __init__(self, interpreter: Interpreter):
@@ -76,10 +77,10 @@ class Resolver:
                 raise RuntimeError(f"Error: La clase '{stmt.name.lexeme}' no puede heredar de sí misma.")
             self.resolve(stmt.superclass)
             self.begin_scope()
-            self.scopes[-1]["super"] = True
+            self.scopes[-1][SUPER_BINDING] = True
         
         self.begin_scope()
-        self.scopes[-1]["this"] = True
+        self.scopes[-1][THIS_BINDING] = True
         for method in stmt.methods:
             self.resolve(method)
         self.end_scope()
